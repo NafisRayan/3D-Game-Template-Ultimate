@@ -6,6 +6,9 @@ export class Controls {
         this.physics = physics;
         this.mouseTime = 0;
         this.keyStates = {};
+        // Cache vectors to avoid creating new ones each frame
+        this.forwardVector = new THREE.Vector3();
+        this.sideVector = new THREE.Vector3();
         
         this.initEventListeners();
     }
@@ -49,36 +52,44 @@ export class Controls {
     update(deltaTime) {
         const speedDelta = deltaTime * (this.player.onFloor ? 25 : 8);
 
-        if (this.keyStates['KeyW']) {
-            this.player.velocity.add(this.getForwardVector().multiplyScalar(speedDelta));
+        // Use cached vectors and combine movement logic to reduce redundant calculations
+        if (this.keyStates['KeyW'] || this.keyStates['KeyS'] || this.keyStates['KeyA'] || this.keyStates['KeyD']) {
+            if (this.keyStates['KeyW']) {
+                this.getForwardVector().multiplyScalar(speedDelta);
+                this.player.velocity.add(this.forwardVector);
+            }
+            if (this.keyStates['KeyS']) {
+                this.getForwardVector().multiplyScalar(-speedDelta);
+                this.player.velocity.add(this.forwardVector);
+            }
+            if (this.keyStates['KeyA']) {
+                this.getSideVector().multiplyScalar(-speedDelta);
+                this.player.velocity.add(this.sideVector);
+            }
+            if (this.keyStates['KeyD']) {
+                this.getSideVector().multiplyScalar(speedDelta);
+                this.player.velocity.add(this.sideVector);
+            }
         }
-        if (this.keyStates['KeyS']) {
-            this.player.velocity.add(this.getForwardVector().multiplyScalar(-speedDelta));
-        }
-        if (this.keyStates['KeyA']) {
-            this.player.velocity.add(this.getSideVector().multiplyScalar(-speedDelta));
-        }
-        if (this.keyStates['KeyD']) {
-            this.player.velocity.add(this.getSideVector().multiplyScalar(speedDelta));
-        }
+        
         if (this.player.onFloor && this.keyStates['Space']) {
             this.player.velocity.y = 15;
         }
     }
 
     getForwardVector() {
-        this.player.camera.getWorldDirection(this.player.direction);
-        this.player.direction.y = 0;
-        this.player.direction.normalize();
-        return this.player.direction;
+        this.player.camera.getWorldDirection(this.forwardVector);
+        this.forwardVector.y = 0;
+        this.forwardVector.normalize();
+        return this.forwardVector;
     }
 
     getSideVector() {
-        this.player.camera.getWorldDirection(this.player.direction);
-        this.player.direction.y = 0;
-        this.player.direction.normalize();
-        this.player.direction.cross(this.player.camera.up);
-        return this.player.direction;
+        this.player.camera.getWorldDirection(this.sideVector);
+        this.sideVector.y = 0;
+        this.sideVector.normalize();
+        this.sideVector.cross(this.player.camera.up);
+        return this.sideVector;
     }
 
     throwBall() {
