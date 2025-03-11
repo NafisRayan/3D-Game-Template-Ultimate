@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Three.js FPS Game</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <style>
+      body {
+        margin: 0px;
+        overflow: hidden;
+      }
+      #info {
+        position: absolute;
+        top: 0px;
+        width: 100%;
+        color: #ffffff;
+        padding: 5px;
+        font-family: Monospace;
+        font-size: 13px;
+        text-align: center;
+        pointer-events: none;
+        z-index: 1000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      Three.js FPS Game - Move with WASD, jump with SPACE, look with MOUSE, shoot balls with MOUSE click
+    </div>
+    <div id="container"></div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.156.1/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.156.1/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./js/game.js"></script>
+  </body>
+</html>
+
+
