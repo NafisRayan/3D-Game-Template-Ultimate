@@ -8,6 +8,10 @@ export class PhysicsWorld {
         this.NUM_SPHERES = 100;
         this.SPHERE_RADIUS = 0.2;
         
+        // Add reusable vectors to avoid creating new ones each frame
+        this.tempVector = new THREE.Vector3();
+        this.damping = 0;
+        
         this.initSpheres();
     }
 
@@ -33,25 +37,37 @@ export class PhysicsWorld {
     }
 
     update(deltaTime) {
-        // Update sphere positions and handle collisions
-        this.spheres.forEach(sphere => {
-            sphere.collider.center.addScaledVector(sphere.velocity, deltaTime);
+        // Precalculate damping outside the loop
+        this.damping = Math.exp(-1.5 * deltaTime) - 1;
+        
+        // Use for loop instead of forEach for better performance
+        for (let i = 0; i < this.spheres.length; i++) {
+            const sphere = this.spheres[i];
+            
+            // Use tempVector to avoid creating new vectors
+            this.tempVector.copy(sphere.velocity).multiplyScalar(deltaTime);
+            sphere.collider.center.add(this.tempVector);
+            
             const result = this.worldOctree.sphereIntersect(sphere.collider);
             
             if (result) {
-                sphere.velocity.addScaledVector(
-                    result.normal,
-                    -result.normal.dot(sphere.velocity) * 1.5
-                );
-                sphere.collider.center.add(result.normal.multiplyScalar(result.depth));
+                // Calculate dot product once
+                const dot = result.normal.dot(sphere.velocity);
+                this.tempVector.copy(result.normal).multiplyScalar(-dot * 1.5);
+                sphere.velocity.add(this.tempVector);
+                
+                this.tempVector.copy(result.normal).multiplyScalar(result.depth);
+                sphere.collider.center.add(this.tempVector);
             } else {
                 sphere.velocity.y -= this.GRAVITY * deltaTime;
             }
 
-            const damping = Math.exp(-1.5 * deltaTime) - 1;
-            sphere.velocity.addScaledVector(sphere.velocity, damping);
+            // Apply damping
+            sphere.velocity.addScaledVector(sphere.velocity, this.damping);
+            
+            // Update mesh position
             sphere.mesh.position.copy(sphere.collider.center);
-        });
+        }
     }
 
     throwBall(position, direction, velocity) {

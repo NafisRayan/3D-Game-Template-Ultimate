@@ -16,21 +16,40 @@ export class Player {
         this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
         this.onFloor = false;
+        
+        // Add reusable vectors
+        this.deltaPosition = new THREE.Vector3();
+        this.GRAVITY = 30; // Constants should be class properties
     }
 
     update(deltaTime) {
         let damping = Math.exp(-4 * deltaTime) - 1;
         if (!this.onFloor) {
-            this.velocity.y -= 30 * deltaTime; // gravity
+            this.velocity.y -= this.GRAVITY * deltaTime;
             damping *= 0.1;
         }
         
         this.velocity.addScaledVector(this.velocity, damping);
-        const deltaPosition = this.velocity.clone().multiplyScalar(deltaTime);
-        this.collider.translate(deltaPosition);
+        
+        // Use cached vector instead of creating new one
+        this.deltaPosition.copy(this.velocity).multiplyScalar(deltaTime);
+        this.collider.translate(this.deltaPosition);
         this.handleCollisions();
         
         this.camera.position.copy(this.collider.end);
+        
+        // Reset player if they fall below the world
+        if (this.collider.end.y < -25) {
+            this.resetPosition();
+        }
+    }
+
+    resetPosition() {
+        this.velocity.set(0, 0, 0);
+        this.collider.start.set(0, 0.35, 0);
+        this.collider.end.set(0, 1, 0);
+        this.camera.position.copy(this.collider.end);
+        this.camera.rotation.set(0, 0, 0);
     }
 
     handleCollisions() {
