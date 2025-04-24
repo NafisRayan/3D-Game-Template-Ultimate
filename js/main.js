@@ -6,7 +6,7 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 import { setupScene, camera, renderer, stats } from './core/sceneSetup.js';
 import { playerCollider, playerVelocity, playerDirection, keyStates, initPlayerControls, updatePlayer, teleportPlayerIfOob } from './core/player.js';
 import { worldOctree, spheres, initSpheres, updateSpheres } from './physics/physics.js';
-import { loadCollisionWorld } from './utils/loader.js';
+import { loadCollisionWorld, visibilitySettings } from './utils/loader.js';
 
 const clock = new THREE.Clock();
 const scene = setupScene(); // Get the scene from sceneSetup
@@ -18,8 +18,39 @@ const STEPS_PER_FRAME = 5;
 initSpheres(scene); // Pass scene to sphere initialization
 initPlayerControls(camera, playerCollider, playerDirection, spheres); // Pass necessary objects
 
+// Helper function to save settings to localStorage
+function saveSettings() {
+    try {
+        localStorage.setItem('visibilitySettings', JSON.stringify(visibilitySettings));
+        console.log('Saved visibility settings to localStorage');
+    } catch (error) {
+        console.warn('Failed to save settings to localStorage:', error);
+    }
+}
+
+// Load saved visibility settings from localStorage if available
+try {
+    const savedSettings = localStorage.getItem('visibilitySettings');
+    if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        // Only apply saved settings that exist in our visibilitySettings object
+        Object.keys(parsedSettings).forEach(key => {
+            if (key in visibilitySettings) {
+                visibilitySettings[key] = parsedSettings[key];
+            }
+        });
+        console.log('Loaded visibility settings from localStorage');
+    }
+} catch (error) {
+    console.warn('Failed to load settings from localStorage:', error);
+}
+
+// Set initial camera far plane from visibility settings
+camera.far = visibilitySettings.cameraFar;
+camera.updateProjectionMatrix();
+
 // Load the world model and build Octree
-loadCollisionWorld(scene, worldOctree, './assets/low_poly_industrial_zone.glb', renderer) // Pass renderer
+loadCollisionWorld(scene, worldOctree, './assets/low_poly_industrial_zone.glb', renderer, camera) // Pass renderer and camera
     .then(() => {
         console.log('Collision world loaded and Octree built.');
         // Start animation loop only after the world is loaded
@@ -33,6 +64,33 @@ loadCollisionWorld(scene, worldOctree, './assets/low_poly_industrial_zone.glb', 
 // --- Event Listeners ---
 
 window.addEventListener('resize', onWindowResize);
+
+// Add keyboard shortcuts for visibility toggles
+window.addEventListener('keydown', (event) => {
+    // Press 'G' key to toggle GUI
+    if (event.key === 'g' || event.key === 'G') {
+        visibilitySettings.showGUI = !visibilitySettings.showGUI;
+        saveSettings();
+
+        // Reload the page to apply the change
+        // This is a simple approach; a more advanced approach would dynamically create/destroy the GUI
+        location.reload();
+    }
+
+    // Press 'U' key to toggle UI elements (FPS counter, info text)
+    if (event.key === 'u' || event.key === 'U') {
+        visibilitySettings.showUI = !visibilitySettings.showUI;
+
+        // Update UI visibility immediately
+        const uiWrapper = document.getElementById('ui-wrapper');
+        if (uiWrapper) {
+            uiWrapper.style.opacity = visibilitySettings.showUI ? '1' : '0';
+            uiWrapper.style.pointerEvents = visibilitySettings.showUI ? 'auto' : 'none';
+        }
+
+        saveSettings();
+    }
+});
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -57,11 +115,33 @@ function animate() {
 }
 
 // --- Initial Setup ---
-// Append renderer and stats to the container
+// Append renderer to the container
 const container = document.getElementById('container');
 if (container) {
     container.appendChild(renderer.domElement);
-    container.appendChild(stats.domElement);
 } else {
     console.error("Container element 'container' not found.");
+}
+
+// Append stats to the stats container
+const statsContainer = document.getElementById('stats-container');
+if (statsContainer) {
+    statsContainer.appendChild(stats.domElement);
+} else {
+    console.error("Stats container element 'stats-container' not found.");
+}
+
+// Set UI wrapper visibility based on settings
+const uiWrapper = document.getElementById('ui-wrapper');
+if (uiWrapper) {
+    // Add showUI property to visibilitySettings if it doesn't exist
+    if (typeof visibilitySettings.showUI === 'undefined') {
+        visibilitySettings.showUI = true; // Default to visible
+    }
+
+    // Apply the visibility setting
+    uiWrapper.style.opacity = visibilitySettings.showUI ? '1' : '0';
+    uiWrapper.style.pointerEvents = visibilitySettings.showUI ? 'auto' : 'none';
+} else {
+    console.error("UI wrapper element 'ui-wrapper' not found.");
 }
