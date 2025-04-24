@@ -14,9 +14,30 @@ const loader = new GLTFLoader();
  * @param {THREE.WebGLRenderer} renderer The WebGL renderer instance.
  * @returns {Promise<void>} A promise that resolves when loading and setup is complete.
  */
-export function loadCollisionWorld(scene, worldOctree, modelPath, renderer) { // Add renderer parameter
+export function loadCollisionWorld(scene, worldOctree, modelPath, renderer) {
     return new Promise((resolve, reject) => {
-        loader.load(modelPath, (gltf) => {
+        const loadingManager = new THREE.LoadingManager();
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingProgress = document.querySelector('.loading-progress');
+
+        loadingManager.onProgress = (url, loaded, total) => {
+            const progress = Math.round((loaded / total) * 100);
+            if (loadingProgress) {
+                loadingProgress.textContent = `${progress}%`;
+            }
+        };
+
+        loadingManager.onLoad = () => {
+            if (loadingScreen) {
+                loadingScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }
+        };
+
+        const gltfLoader = new GLTFLoader(loadingManager);
+        gltfLoader.load(modelPath, (gltf) => {
             scene.add(gltf.scene);
 
             // Build Octree from the loaded model
