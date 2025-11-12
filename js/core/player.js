@@ -51,6 +51,8 @@ const CAMERA_DISTANCE_FIRST = 0.2;
 const CAMERA_HEIGHT_FIRST = 1.0;
 const CAMERA_MIN_PITCH = -Math.PI / 3;
 const CAMERA_MAX_PITCH = Math.PI / 4;
+const CAMERA_PITCH_THIRD = 0.18;
+const CAMERA_PITCH_FIRST = -0.08;
 
 let viewMode = visibilitySettings.viewMode || 'third';
 
@@ -88,10 +90,10 @@ function initPlayerControls(scene, camera, collider, direction, spheres) {
     });
 
     window.addEventListener('player-view-change', (event) => {
-        setViewMode(event.detail);
+        setViewMode(event.detail, { persist: true });
     });
 
-    setViewMode(viewMode);
+    setViewMode(viewMode, { immediate: true });
 }
 
 function toggleViewMode() {
@@ -101,7 +103,7 @@ function toggleViewMode() {
 function setViewMode(mode, options = {}) {
     viewMode = mode === 'first' ? 'first' : 'third';
     visibilitySettings.viewMode = viewMode;
-    _cameraPitch = viewMode === 'third' ? 0.15 : 0;
+    _cameraPitch = viewMode === 'third' ? CAMERA_PITCH_THIRD : CAMERA_PITCH_FIRST;
     if (modelReady) {
         playerGroup.visible = viewMode === 'third';
     }
@@ -122,7 +124,7 @@ function persistViewMode() {
 function onKeyDown(event) {
     keyStates[event.code] = true;
 
-    if (event.code === 'KeyV') {
+    if (event.code === 'KeyV' && !event.repeat) {
         toggleViewMode();
     }
 }
@@ -169,6 +171,7 @@ function loadCharacter() {
 
             setAction('Idle');
             modelReady = true;
+            setViewMode(viewMode, { immediate: true });
         },
         undefined,
         (error) => {
