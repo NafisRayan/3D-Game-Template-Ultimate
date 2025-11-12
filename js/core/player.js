@@ -55,6 +55,10 @@ const CAMERA_MIN_PITCH_FIRST = -Math.PI / 2 + 0.1;
 const CAMERA_MAX_PITCH_FIRST = Math.PI / 2 - 0.1;
 const CAMERA_PITCH_THIRD = 0.18;
 const CAMERA_PITCH_FIRST = 1;
+const CAMERA_DISTANCE_THIRD_MIN = 2.5;
+const CAMERA_DISTANCE_THIRD_MAX = 12;
+
+let thirdPersonDistance = CAMERA_DISTANCE_THIRD;
 
 let viewMode = visibilitySettings.viewMode || 'third';
 
@@ -103,6 +107,19 @@ function initPlayerControls(scene, camera, collider, direction, spheres) {
         }
     });
 
+    window.addEventListener('wheel', (event) => {
+        if (viewMode !== 'third') return;
+        const zoomDelta = event.deltaY * 0.0025;
+        if (zoomDelta !== 0) {
+            thirdPersonDistance = THREE.MathUtils.clamp(
+                thirdPersonDistance + zoomDelta,
+                CAMERA_DISTANCE_THIRD_MIN,
+                CAMERA_DISTANCE_THIRD_MAX
+            );
+            event.preventDefault();
+        }
+    }, { passive: false });
+
     window.addEventListener('player-view-change', (event) => {
         setViewMode(event.detail, { persist: true });
     });
@@ -119,6 +136,13 @@ function setViewMode(mode, options = {}) {
     visibilitySettings.viewMode = viewMode;
     _cameraPitch = viewMode === 'third' ? CAMERA_PITCH_THIRD : CAMERA_PITCH_FIRST;
     clampCameraPitch();
+    if (viewMode === 'third') {
+        thirdPersonDistance = THREE.MathUtils.clamp(
+            thirdPersonDistance,
+            CAMERA_DISTANCE_THIRD_MIN,
+            CAMERA_DISTANCE_THIRD_MAX
+        );
+    }
     if (modelReady) {
         playerGroup.visible = viewMode === 'third';
     }
@@ -296,7 +320,7 @@ function alignCharacterWithCollider() {
 function updateCameraFollow(deltaTime) {
     const isThirdPerson = viewMode === 'third';
     const targetHeight = isThirdPerson ? CAMERA_HEIGHT_THIRD : CAMERA_HEIGHT_FIRST;
-    const targetDistance = isThirdPerson ? CAMERA_DISTANCE_THIRD : CAMERA_DISTANCE_FIRST;
+    const targetDistance = isThirdPerson ? thirdPersonDistance : CAMERA_DISTANCE_FIRST;
 
     clampCameraPitch();
 
