@@ -52,7 +52,7 @@ const CAMERA_HEIGHT_FIRST = 1.0;
 const CAMERA_MIN_PITCH = -Math.PI / 3;
 const CAMERA_MAX_PITCH = Math.PI / 4;
 const CAMERA_PITCH_THIRD = 0.18;
-const CAMERA_PITCH_FIRST = -0.08;
+const CAMERA_PITCH_FIRST = 1.5;
 
 let viewMode = visibilitySettings.viewMode || 'third';
 
