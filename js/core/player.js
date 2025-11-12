@@ -57,10 +57,20 @@ const CAMERA_PITCH_THIRD = 0.18;
 const CAMERA_PITCH_FIRST = 1;
 const CAMERA_DISTANCE_THIRD_MIN = 2.5;
 const CAMERA_DISTANCE_THIRD_MAX = 12;
+const ANIMATION_FADE_DURATION = 0.35;
 
 let thirdPersonDistance = CAMERA_DISTANCE_THIRD;
 
 let viewMode = visibilitySettings.viewMode || 'third';
+
+function isMovementInputActive() {
+    return !!(
+        keyStates['KeyW'] || keyStates['ArrowUp'] ||
+        keyStates['KeyS'] || keyStates['ArrowDown'] ||
+        keyStates['KeyA'] || keyStates['ArrowLeft'] ||
+        keyStates['KeyD'] || keyStates['ArrowRight']
+    );
+}
 
 function getPitchLimits(mode = viewMode) {
     if (mode === 'first') {
@@ -220,19 +230,34 @@ function loadCharacter() {
 }
 
 function setAction(name) {
-    if (!actions[name] || currentAction === name) return;
+    if (!actions || !actions[name]) return;
+    if (currentAction === name) return;
 
+    const previousName = currentAction;
+    const previous = previousName ? actions[previousName] : null;
     const nextAction = actions[name];
-    const previous = currentAction ? actions[currentAction] : null;
-
-    nextAction.reset();
-    nextAction.fadeIn(0.3).play();
-
-    if (previous && previous !== nextAction) {
-        previous.fadeOut(0.3);
-    }
 
     currentAction = name;
+
+    nextAction.enabled = true;
+    nextAction.setEffectiveTimeScale(1);
+    nextAction.setEffectiveWeight(1);
+    nextAction.play();
+
+    if (previous && previous !== nextAction) {
+        if (previousName !== 'Idle' && name !== 'Idle') {
+            const prevDuration = previous.getClip().duration || 1;
+            const nextDuration = nextAction.getClip().duration || prevDuration;
+            nextAction.time = (previous.time || 0) * (nextDuration / prevDuration);
+        } else {
+            nextAction.reset();
+        }
+
+        previous.crossFadeTo(nextAction, ANIMATION_FADE_DURATION, true);
+    } else {
+        nextAction.reset();
+        nextAction.fadeIn(ANIMATION_FADE_DURATION);
+    }
 }
 
 // --- Ball Throwing ---
@@ -345,21 +370,18 @@ function updateAnimations(deltaTime) {
 
     mixer.update(deltaTime);
 
-    horizontalVelocity.copy(playerVelocity);
-    const speed = Math.sqrt(horizontalVelocity.x ** 2 + horizontalVelocity.z ** 2);
-
     if (!playerOnFloor) {
-        // Keep current action while in air
         return;
     }
 
-    if (speed > 6 && isRunning) {
-        setAction('Run');
-    } else if (speed > 1.5) {
-        setAction('Walk');
-    } else {
+    const moving = isMovementInputActive();
+
+    if (!moving) {
         setAction('Idle');
+        return;
     }
+
+    setAction(isRunning ? 'Run' : 'Walk');
 }
 
 function getForwardVector() {
@@ -379,11 +401,12 @@ function getSideVector() {
 
 function controls(deltaTime) {
     const runKey = keyStates['ShiftLeft'] || keyStates['ShiftRight'];
-    isRunning = !!runKey;
-
     const walkSpeed = playerOnFloor ? 18 : 6;
     const runSpeed = playerOnFloor ? 32 : 12;
-    const speedDelta = deltaTime * (runKey ? runSpeed : walkSpeed);
+    const movementActive = isMovementInputActive();
+    isRunning = !!(runKey && movementActive);
+
+    const speedDelta = deltaTime * (isRunning ? runSpeed : walkSpeed);
 
     if (keyStates['KeyW'] || keyStates['ArrowUp']) {
         playerVelocity.add(getForwardVector().multiplyScalar(speedDelta));
