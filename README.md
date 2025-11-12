@@ -94,8 +94,7 @@ Then open [http://localhost:8080/index.html](http://localhost:8080/index.html).
 ### Keyboard & Mouse
 | Action | Input |
 | ------ | ----- |
-| Toggle GUI | `G` |
-| Toggle UI overlay | `U` |
+| Toggle GUI & UI overlay | `G` |
 | Toggle first/third-person view | `V` |
 | Move | `W` `A` `S` `D` (or arrow keys) |
 | Run | Hold `Shift` while moving |
@@ -109,8 +108,8 @@ Additional behaviors:
 - Spheres inherit some of the player’s momentum when thrown.
 
 ### GUI Controls
-The lil-gui panel (toggle with `G`) provides:
-- **Visibility** – Show/hide UI overlay.
+The lil-gui panel (toggled alongside the UI overlay with `G`) provides:
+- **Visibility** – Show/hide the overlay and panel together.
 - **Controls → Camera View** – Switch between `Third Person` and `First Person` (mirrors `V`).
 - **Fog distance, model scale, camera far plane** – immediately reflected in scene.
 - All settings persist via `localStorage` under the `visibilitySettings` key.

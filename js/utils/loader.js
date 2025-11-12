@@ -14,6 +14,20 @@ export const visibilitySettings = {
     viewMode: 'third'     // Camera view mode: 'first' or 'third'
 };
 
+function updateUIVisibility() {
+    const uiWrapper = document.getElementById('ui-wrapper');
+    if (!uiWrapper) return;
+
+    const visible = !!visibilitySettings.showUI;
+    uiWrapper.style.opacity = visible ? '1' : '0';
+    uiWrapper.style.pointerEvents = visible ? 'auto' : 'none';
+}
+
+function toggleGuiVisibility(gui, show) {
+    if (!gui || !gui.domElement) return;
+    gui.domElement.style.display = show ? '' : 'none';
+}
+
 // We'll create the loader inside the loadCollisionWorld function
 
 /**
@@ -87,112 +101,120 @@ export function loadCollisionWorld(scene, worldOctree, modelPath, renderer, came
             helper.visible = false; // Initially hidden
             scene.add(helper);
 
-            // Add GUI controls for visibility and scale settings if enabled
-            if (visibilitySettings.showGUI) {
-                try {
-                    const gui = new GUI({ width: 250 });
+            // Add GUI controls for visibility and scale settings
+            try {
+                const gui = new GUI({ width: 250 });
 
-                    // Helper function to save settings to localStorage
-                    const saveSettings = () => {
-                        try {
-                            localStorage.setItem('visibilitySettings', JSON.stringify(visibilitySettings));
-                            console.log('Saved visibility settings to localStorage');
-                        } catch (error) {
-                            console.warn('Failed to save settings to localStorage:', error);
+                // Helper function to save settings to localStorage
+                const saveSettings = () => {
+                    try {
+                        localStorage.setItem('visibilitySettings', JSON.stringify(visibilitySettings));
+                        console.log('Saved visibility settings to localStorage');
+                    } catch (error) {
+                        console.warn('Failed to save settings to localStorage:', error);
+                    }
+                };
+
+                // Debug folder for Octree helper
+                const debugFolder = gui.addFolder('Debug');
+                debugFolder.add({ debug: false }, 'debug')
+                    .name('Octree Helper')
+                    .onChange(function (value) {
+                        helper.visible = value;
+                    });
+
+                // Visibility settings folder
+                const visibilityFolder = gui.addFolder('Visibility Settings');
+
+                // Fog controls
+                visibilityFolder.add(visibilitySettings, 'fogNear', 0, 100)
+                    .name('Fog Near')
+                    .onChange(value => {
+                        if (scene.fog) {
+                            scene.fog.near = value;
                         }
-                    };
+                        saveSettings();
+                    });
 
-                    // Debug folder for Octree helper
-                    const debugFolder = gui.addFolder('Debug');
-                    debugFolder.add({ debug: false }, 'debug')
-                        .name('Octree Helper')
-                        .onChange(function (value) {
-                            helper.visible = value;
-                        });
+                visibilityFolder.add(visibilitySettings, 'fogFar', 10, 500)
+                    .name('Fog Far')
+                    .onChange(value => {
+                        if (scene.fog) {
+                            scene.fog.far = value;
+                        }
+                        saveSettings();
+                    });
 
-                    // Visibility settings folder
-                    const visibilityFolder = gui.addFolder('Visibility Settings');
+                // Model scale control
+                visibilityFolder.add(visibilitySettings, 'modelScale', 0.1, 5)
+                    .name('Model Scale')
+                    .onChange(value => {
+                        gltf.scene.scale.set(value, value, value);
+                        // Rebuild octree when scale changes
+                        worldOctree.fromGraphNode(gltf.scene);
+                        saveSettings();
+                    });
 
-                    // Fog controls
-                    visibilityFolder.add(visibilitySettings, 'fogNear', 0, 100)
-                        .name('Fog Near')
-                        .onChange(value => {
-                            if (scene.fog) {
-                                scene.fog.near = value;
-                            }
-                            saveSettings();
-                        });
+                // Camera far plane control
+                visibilityFolder.add(visibilitySettings, 'cameraFar', 100, 5000)
+                    .name('View Distance')
+                    .onChange(value => {
+                        // Update the camera far plane
+                        if (camera) {
+                            camera.far = value;
+                            camera.updateProjectionMatrix();
+                        }
+                        saveSettings();
+                    });
 
-                    visibilityFolder.add(visibilitySettings, 'fogFar', 10, 500)
-                        .name('Fog Far')
-                        .onChange(value => {
-                            if (scene.fog) {
-                                scene.fog.far = value;
-                            }
-                            saveSettings();
-                        });
+                // Add GUI visibility toggle
+                visibilityFolder.add(visibilitySettings, 'showGUI')
+                    .name('Show GUI')
+                    .onChange(value => {
+                        visibilitySettings.showUI = value;
+                        updateUIVisibility();
+                        toggleGuiVisibility(gui, value);
+                        saveSettings();
+                    });
 
-                    // Model scale control
-                    visibilityFolder.add(visibilitySettings, 'modelScale', 0.1, 5)
-                        .name('Model Scale')
-                        .onChange(value => {
-                            gltf.scene.scale.set(value, value, value);
-                            // Rebuild octree when scale changes
-                            worldOctree.fromGraphNode(gltf.scene);
-                            saveSettings();
-                        });
+                // Add UI visibility toggle
+                visibilityFolder.add(visibilitySettings, 'showUI')
+                    .name('Show UI Elements')
+                    .onChange(value => {
+                        visibilitySettings.showGUI = value;
+                        updateUIVisibility();
+                        toggleGuiVisibility(gui, value);
+                        saveSettings();
+                    });
 
-                    // Camera far plane control
-                    visibilityFolder.add(visibilitySettings, 'cameraFar', 100, 5000)
-                        .name('View Distance')
-                        .onChange(value => {
-                            // Update the camera far plane
-                            if (camera) {
-                                camera.far = value;
-                                camera.updateProjectionMatrix();
-                            }
-                            saveSettings();
-                        });
+                const controlsFolder = gui.addFolder('Controls');
+                controlsFolder.add(visibilitySettings, 'viewMode', { 'Third Person': 'third', 'First Person': 'first' })
+                    .name('Camera View')
+                    .onChange(value => {
+                        window.dispatchEvent(new CustomEvent('player-view-change', { detail: value }));
+                        saveSettings();
+                    });
+                controlsFolder.open();
 
-                    // Add GUI visibility toggle
-                    visibilityFolder.add(visibilitySettings, 'showGUI')
-                        .name('Show GUI')
-                        .onChange(() => {
-                            saveSettings();
-                            console.log('GUI visibility will change on next reload');
-                        });
+                // Apply initial visibility states
+                updateUIVisibility();
+                toggleGuiVisibility(gui, visibilitySettings.showGUI);
 
-                    // Add UI visibility toggle
-                    visibilityFolder.add(visibilitySettings, 'showUI')
-                        .name('Show UI Elements')
-                        .onChange(value => {
-                            // Update UI visibility immediately
-                            const uiWrapper = document.getElementById('ui-wrapper');
-                            if (uiWrapper) {
-                                uiWrapper.style.opacity = value ? '1' : '0';
-                                uiWrapper.style.pointerEvents = value ? 'auto' : 'none';
-                            }
-                            saveSettings();
-                        });
+                window.addEventListener('gui-visibility-toggle', (event) => {
+                    const showGUI = !!event.detail?.showGUI;
+                    visibilitySettings.showGUI = showGUI;
+                    visibilitySettings.showUI = showGUI;
+                    updateUIVisibility();
+                    toggleGuiVisibility(gui, showGUI);
+                    saveSettings();
+                });
 
-                    const controlsFolder = gui.addFolder('Controls');
-                    controlsFolder.add(visibilitySettings, 'viewMode', { 'Third Person': 'third', 'First Person': 'first' })
-                        .name('Camera View')
-                        .onChange(value => {
-                            window.dispatchEvent(new CustomEvent('player-view-change', { detail: value }));
-                            saveSettings();
-                        });
-                    controlsFolder.open();
+                // Open the visibility folder by default
+                visibilityFolder.open();
 
-                    // Open the visibility folder by default
-                    visibilityFolder.open();
-
-                } catch (error) {
-                    console.warn("Could not initialize lil-gui:", error);
-                    // GUI is optional, continue without it
-                }
-            } else {
-                console.log('GUI is disabled. Set visibilitySettings.showGUI to true to enable it.');
+            } catch (error) {
+                console.warn("Could not initialize lil-gui:", error);
+                // GUI is optional, continue without it
             }
 
             resolve(); // Resolve the promise indicating success

@@ -67,21 +67,10 @@ window.addEventListener('resize', onWindowResize);
 
 // Add keyboard shortcuts for visibility toggles
 window.addEventListener('keydown', (event) => {
-    // Press 'G' key to toggle GUI
     if (event.key === 'g' || event.key === 'G') {
         visibilitySettings.showGUI = !visibilitySettings.showGUI;
-        saveSettings();
+        visibilitySettings.showUI = visibilitySettings.showGUI;
 
-        // Reload the page to apply the change
-        // This is a simple approach; a more advanced approach would dynamically create/destroy the GUI
-        location.reload();
-    }
-
-    // Press 'U' key to toggle UI elements (FPS counter, info text)
-    if (event.key === 'u' || event.key === 'U') {
-        visibilitySettings.showUI = !visibilitySettings.showUI;
-
-        // Update UI visibility immediately
         const uiWrapper = document.getElementById('ui-wrapper');
         if (uiWrapper) {
             uiWrapper.style.opacity = visibilitySettings.showUI ? '1' : '0';
@@ -89,6 +78,10 @@ window.addEventListener('keydown', (event) => {
         }
 
         saveSettings();
+
+        window.dispatchEvent(new CustomEvent('gui-visibility-toggle', {
+            detail: { showGUI: visibilitySettings.showGUI }
+        }));
     }
 });
 
