@@ -49,12 +49,26 @@ const CAMERA_DISTANCE_THIRD = 6;
 const CAMERA_HEIGHT_THIRD = 2.8;
 const CAMERA_DISTANCE_FIRST = 0.2;
 const CAMERA_HEIGHT_FIRST = 1.0;
-const CAMERA_MIN_PITCH = -Math.PI / 3;
-const CAMERA_MAX_PITCH = Math.PI / 4;
+const CAMERA_MIN_PITCH_THIRD = -Math.PI / 3;
+const CAMERA_MAX_PITCH_THIRD = Math.PI / 4;
+const CAMERA_MIN_PITCH_FIRST = -Math.PI / 2 + 0.1;
+const CAMERA_MAX_PITCH_FIRST = Math.PI / 2 - 0.1;
 const CAMERA_PITCH_THIRD = 0.18;
-const CAMERA_PITCH_FIRST = 1.5;
+const CAMERA_PITCH_FIRST = 1;
 
 let viewMode = visibilitySettings.viewMode || 'third';
+
+function getPitchLimits(mode = viewMode) {
+    if (mode === 'first') {
+        return { min: CAMERA_MIN_PITCH_FIRST, max: CAMERA_MAX_PITCH_FIRST };
+    }
+    return { min: CAMERA_MIN_PITCH_THIRD, max: CAMERA_MAX_PITCH_THIRD };
+}
+
+function clampCameraPitch() {
+    const { min, max } = getPitchLimits();
+    _cameraPitch = THREE.MathUtils.clamp(_cameraPitch, min, max);
+}
 
 // --- Input Handling ---
 function initPlayerControls(scene, camera, collider, direction, spheres) {
@@ -85,7 +99,7 @@ function initPlayerControls(scene, camera, collider, direction, spheres) {
         if (document.pointerLockElement === document.body) {
             _cameraYaw -= event.movementX / 500;
             _cameraPitch -= event.movementY / 500;
-            _cameraPitch = THREE.MathUtils.clamp(_cameraPitch, CAMERA_MIN_PITCH, CAMERA_MAX_PITCH);
+            clampCameraPitch();
         }
     });
 
@@ -104,6 +118,7 @@ function setViewMode(mode, options = {}) {
     viewMode = mode === 'first' ? 'first' : 'third';
     visibilitySettings.viewMode = viewMode;
     _cameraPitch = viewMode === 'third' ? CAMERA_PITCH_THIRD : CAMERA_PITCH_FIRST;
+    clampCameraPitch();
     if (modelReady) {
         playerGroup.visible = viewMode === 'third';
     }
@@ -282,6 +297,8 @@ function updateCameraFollow(deltaTime) {
     const isThirdPerson = viewMode === 'third';
     const targetHeight = isThirdPerson ? CAMERA_HEIGHT_THIRD : CAMERA_HEIGHT_FIRST;
     const targetDistance = isThirdPerson ? CAMERA_DISTANCE_THIRD : CAMERA_DISTANCE_FIRST;
+
+    clampCameraPitch();
 
     cameraOffset.set(0, targetHeight, targetDistance);
     const offsetEuler = new THREE.Euler(_cameraPitch, _cameraYaw, 0, 'YXZ');
