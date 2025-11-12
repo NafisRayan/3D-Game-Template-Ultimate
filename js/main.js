@@ -16,7 +16,7 @@ const STEPS_PER_FRAME = 5;
 // --- Initialization ---
 
 initSpheres(scene); // Pass scene to sphere initialization
-initPlayerControls(camera, playerCollider, playerDirection, spheres); // Pass necessary objects
+initPlayerControls(scene, camera, playerCollider, playerDirection, spheres);
 
 // Helper function to save settings to localStorage
 function saveSettings() {
@@ -105,7 +105,7 @@ function animate() {
 
     for (let i = 0; i < STEPS_PER_FRAME; i++) {
         // Player controls are handled internally by player.js via event listeners
-        updatePlayer(deltaTime, worldOctree, keyStates, playerVelocity, playerCollider, camera, playerDirection); // Pass necessary state
+        updatePlayer(deltaTime, worldOctree);
         updateSpheres(deltaTime, worldOctree, spheres, playerCollider, playerVelocity); // Pass necessary state
         teleportPlayerIfOob(camera, playerCollider); // Pass necessary state
     }

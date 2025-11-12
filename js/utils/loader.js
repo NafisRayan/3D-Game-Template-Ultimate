@@ -10,7 +10,8 @@ export const visibilitySettings = {
     modelScale: 0.7,      // Scale factor for the model (default: 1.0)
     cameraFar: 1000,      // Camera far plane distance (default: 1000)
     showGUI: true,       // Whether to show the GUI (default: false)
-    showUI: true          // Whether to show the UI elements (FPS counter, info text) (default: true)
+    showUI: true,         // Whether to show the UI elements (FPS counter, info text) (default: true)
+    viewMode: 'third'     // Camera view mode: 'first' or 'third'
 };
 
 // We'll create the loader inside the loadCollisionWorld function
@@ -173,6 +174,15 @@ export function loadCollisionWorld(scene, worldOctree, modelPath, renderer, came
                             }
                             saveSettings();
                         });
+
+                    const controlsFolder = gui.addFolder('Controls');
+                    controlsFolder.add(visibilitySettings, 'viewMode', { 'Third Person': 'third', 'First Person': 'first' })
+                        .name('Camera View')
+                        .onChange(value => {
+                            window.dispatchEvent(new CustomEvent('player-view-change', { detail: value }));
+                            saveSettings();
+                        });
+                    controlsFolder.open();
 
                     // Open the visibility folder by default
                     visibilityFolder.open();
