@@ -329,8 +329,10 @@ function updateCameraTarget() {
 function alignCharacterWithCollider() {
     if (!modelReady) return;
 
-    const targetPosition = cameraTarget.clone().add(MODEL_OFFSET);
-    playerGroup.position.lerp(targetPosition, 0.25);
+    const colliderBase = tempVector.copy(_playerCollider.start);
+    colliderBase.y -= playerCollider.radius;
+
+    playerGroup.position.lerp(colliderBase, 0.25);
 
     horizontalVelocity.copy(playerVelocity);
     horizontalVelocity.y = 0;
